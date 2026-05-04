@@ -2,6 +2,966 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<script>
+function showPage(id, tabEl) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+    const page = document.getElementById('page-' + id);
+    if (page) { page.classList.add('active'); window.scrollTo(0, 0); }
+    if (tabEl) tabEl.classList.add('active');
+  }
+
+  let childCount = 0;
+  function addChild() {
+    childCount++;
+    const id = 'child-' + childCount;
+    const div = document.createElement('div');
+    div.className = 'repeat-group';
+    div.id = id;
+    div.innerHTML = `
+      <div class="repeat-row">
+        <div class="form-group"><label>Child's First Name</label><input type="text" placeholder="Name"></div>
+        <div class="form-group"><label>Age</label><input type="text" placeholder="Age"></div>
+        <div class="form-group"><label>Birthday</label><input type="date"></div>
+        <div class="form-group"><label>Interests</label><input type="text" placeholder="Sports, art, music..."></div>
+        <button type="button" class="remove-btn" onclick="document.getElementById('${id}').remove()">✕</button>
+      </div>`;
+    document.getElementById('children-container').appendChild(div);
+  }
+
+  let petCount = 0;
+  function addPet() {
+    petCount++;
+    const id = 'pet-' + petCount;
+    const div = document.createElement('div');
+    div.className = 'repeat-group';
+    div.id = id;
+    div.innerHTML = `
+      <div class="repeat-row">
+        <div class="form-group"><label>Pet's Name</label><input type="text" placeholder="Name"></div>
+        <div class="form-group"><label>Type</label><select><option>Dog</option><option>Cat</option><option>Bird</option><option>Other</option></select></div>
+        <div class="form-group"><label>Breed (optional)</label><input type="text" placeholder="Breed"></div>
+        <button type="button" class="remove-btn" onclick="document.getElementById('${id}').remove()">✕</button>
+      </div>`;
+    document.getElementById('pets-container').appendChild(div);
+  }
+
+  function submitIntake(e) {
+    e.preventDefault();
+    document.getElementById('success-overlay').classList.add('show');
+    showPage('dashboard', document.querySelectorAll('.nav-tab')[0]);
+  }
+
+  // ——— DOCUMENTS ———
+  const STATUS_LABELS = {
+    'status-signed': 'Signed',
+    'status-pending': 'Pending',
+    'status-required': 'Action Needed',
+    'status-optional': 'Upcoming'
+  };
+  const DOC_ICONS = {
+    'Amendments': '✏️', 'Receipts': '🧾', 'Disclosures': '📢',
+    'Inspection': '🔍', 'Closing': '🏠', 'Buyer Documents': '👤',
+    'Seller Documents': '🏡', '': '📄', 'General': '📄', 'Other': '📎'
+  };
+
+  let documents = [
+    { id: 1, name: 'Client Intake Form', category: 'Buyer Documents', status: 'status-required', notes: 'Please complete the intake form' },
+    { id: 2, name: 'Buyer Representation Agreement', category: 'Buyer Documents', status: 'status-signed', notes: 'Signed · April 2025' },
+    { id: 3, name: 'Pre-Approval Letter', category: 'Buyer Documents', status: 'status-pending', notes: 'Upload or provide from your lender' },
+    { id: 4, name: 'Purchase Agreement', category: 'Buyer Documents', status: 'status-optional', notes: 'Will be provided when an offer is made' },
+    { id: 5, name: 'Inspection Report', category: 'Inspection', status: 'status-optional', notes: 'Will be available after property inspection' },
+    { id: 6, name: 'Appraisal Report', category: 'Inspection', status: 'status-optional', notes: 'Will be available after lender appraisal' },
+    { id: 7, name: 'Closing Disclosure', category: 'Closing', status: 'status-optional', notes: 'Will be provided 3 days before closing' }
+  ];
+  let docCounter = 7;
+  let activeFilter = 'all';
+
+  function renderDocs() {
+    const list = document.getElementById('doc-list');
+    const noMsg = document.getElementById('no-docs-msg');
+    const filtered = activeFilter === 'all' ? documents : documents.filter(d => d.category === activeFilter);
+    if (filtered.length === 0) {
+      list.innerHTML = '';
+      noMsg.style.display = 'block';
+      return;
+    }
+    noMsg.style.display = 'none';
+    list.innerHTML = filtered.map(doc => {
+      const icon = DOC_ICONS[doc.category] || '📄';
+      const label = STATUS_LABELS[doc.status] || 'Pending';
+      const catTag = doc.category ? `<span style="font-size:11px;color:var(--muted);margin-top:2px;display:block;">${doc.category}</span>` : '';
+      return `<div class="doc-item" id="doc-item-${doc.id}">
+        <div class="doc-icon">${icon}</div>
+        <div class="doc-info">
+          <h4>${doc.name}</h4>
+          ${catTag}
+          <p>${doc.notes || ''}</p>
+        </div>
+        <span class="doc-status ${doc.status}">${label}</span>
+      </div>`;
+    }).join('');
+  }
+
+  function toggleAddDoc() {
+    const panel = document.getElementById('add-doc-panel');
+    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+    if (panel.style.display === 'block') document.getElementById('new-doc-name').focus();
+  }
+
+  function addDocument() {
+    const name = document.getElementById('new-doc-name').value.trim();
+    if (!name) { document.getElementById('new-doc-name').focus(); return; }
+    const category = document.getElementById('new-doc-category').value;
+    const status = document.getElementById('new-doc-status').value;
+    const notes = document.getElementById('new-doc-notes').value.trim();
+    documents.push({ id: docCounter++, name, category, status, notes });
+    document.getElementById('new-doc-name').value = '';
+    document.getElementById('new-doc-notes').value = '';
+    document.getElementById('new-doc-category').value = '';
+    document.getElementById('new-doc-status').value = 'status-pending';
+    document.getElementById('add-doc-panel').style.display = 'none';
+    renderDocs();
+  }
+
+  function removeDoc(id) {
+    documents = documents.filter(d => d.id !== id);
+    renderDocs();
+  }
+
+  function changeDocStatus(id, newStatus) {
+    const doc = documents.find(d => d.id === id);
+    if (doc) { doc.status = newStatus; renderDocs(); }
+  }
+
+  function filterDocs(cat, btn) {
+    activeFilter = cat;
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderDocs();
+  }
+
+  renderDocs();
+
+
+
+
+
+  // ——— SECTION NAVIGATION ———
+  function getNavTab(pageId) {
+    const tabs = document.querySelectorAll('.nav-tab');
+    for (let t of tabs) {
+      if (t.getAttribute('onclick') && t.getAttribute('onclick').includes("'" + pageId + "'")) return t;
+    }
+    return null;
+  }
+
+  function showSection(sectionId) {
+    // Hide all pages, clear nav active state
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+    // Show the section page
+    const page = document.getElementById('page-section-' + sectionId);
+    if (page) {
+      page.classList.add('active');
+      window.scrollTo(0, 0);
+    }
+    // Sync inspection dates
+    if (sectionId === 'tab-inspection') {
+      const di = document.getElementById('date-inspection');
+      const dr = document.getElementById('date-response');
+      const ii = document.getElementById('insp-date-inspection');
+      const ir = document.getElementById('insp-date-response');
+      if (di && ii) ii.value = di.value;
+      if (dr && ir) ir.value = dr.value;
+    }
+    // Sync closing date and countdown
+    if (sectionId === 'tab-closing') {
+      const dc = document.getElementById('date-closing');
+      const cd = document.getElementById('closing-date-display');
+      if (dc && cd) { cd.value = dc.value; updateClosingCountdown(dc.value); }
+    }
+  }
+
+  // ——— HUB2 SYSTEM (for section pages) ———
+  const hub2State = {};
+
+  function initHub2(hubId, prefilledLinks) {
+    if (!hub2State[hubId]) {
+      hub2State[hubId] = { links: [...prefilledLinks], docs: [], files: [] };
+    }
+    renderHub2(hubId);
+  }
+
+  function renderHub2(hubId) {
+    const container = document.getElementById('hub2-' + hubId);
+    if (!container) return;
+    const state = hub2State[hubId];
+
+    container.innerHTML = `
+      <div class="hub-section">
+        <div class="hub-section-title">
+          <div class="hub-section-title-left">🔗 Links &amp; Resources</div>
+          <button class="hub-btn-sm hub-btn-outline" onclick="toggleHub2Panel('${hubId}-link')">+ Add Link</button>
+        </div>
+        <div id="panel2-${hubId}-link" class="hub-add-panel">
+          <input class="hub-input" id="link2-label-${hubId}" placeholder="Link label (e.g. My Lender Portal)">
+          <input class="hub-input" id="link2-url-${hubId}" placeholder="https://...">
+          <div style="display:flex;gap:8px;margin-top:4px;">
+            <button class="hub-btn-sm hub-btn-red" onclick="addHub2Link('${hubId}')">Add</button>
+            <button class="hub-btn-sm hub-btn-outline" onclick="toggleHub2Panel('${hubId}-link')">Cancel</button>
+          </div>
+        </div>
+        <div id="links2-${hubId}">
+          ${state.links.map((l, i) => `
+            <div class="hub-link-item">
+              <span class="link-icon">🔗</span>
+              <a href="${l.url}" target="_blank">${l.label}</a>
+              <button class="tour-remove" onclick="removeHub2Link('${hubId}', ${i})">✕</button>
+            </div>`).join('')}
+        </div>
+      </div>
+
+      <div class="hub-section">
+        <div class="hub-section-title">
+          <div class="hub-section-title-left">📄 Documents</div>
+          <button class="hub-btn-sm hub-btn-outline" onclick="toggleHub2Panel('${hubId}-doc')">+ Add Document</button>
+        </div>
+        <div id="panel2-${hubId}-doc" class="hub-add-panel">
+          <input class="hub-input" id="doc2-name-${hubId}" placeholder="Document name">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+            <select class="hub-input" id="doc2-status-${hubId}" style="margin-bottom:0;">
+              <option value="status-pending">Pending</option>
+              <option value="status-signed">Signed</option>
+              <option value="status-required">Action Needed</option>
+              <option value="status-optional">Upcoming</option>
+            </select>
+            <input class="hub-input" id="doc2-notes-${hubId}" placeholder="Notes (optional)" style="margin-bottom:0;">
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button class="hub-btn-sm hub-btn-red" onclick="addHub2Doc('${hubId}')">Add</button>
+            <button class="hub-btn-sm hub-btn-outline" onclick="toggleHub2Panel('${hubId}-doc')">Cancel</button>
+          </div>
+        </div>
+        <div id="docs2-${hubId}">
+          ${state.docs.length === 0
+            ? '<p style="font-size:13px;color:var(--muted);padding:8px 0;">No documents added yet.</p>'
+            : state.docs.map((d, i) => `
+              <div class="hub-doc-item">
+                <div class="doc-icon" style="width:32px;height:32px;font-size:15px;">📄</div>
+                <div class="doc-info"><h4>${d.name}</h4><p>${d.notes||''}</p></div>
+                <span class="doc-status ${d.status}">${STATUS_LABELS[d.status]}</span>
+                <button class="tour-remove" onclick="removeHub2Doc('${hubId}', ${i})">✕</button>
+              </div>`).join('')}
+        </div>
+      </div>
+
+      <div class="hub-section">
+        <div class="hub-section-title">
+          <div class="hub-section-title-left">📎 File Uploads</div>
+        </div>
+        <div class="hub-upload-area" onclick="document.getElementById('file2-input-${hubId}').click()">
+          <div style="font-size:28px;">⬆️</div>
+          <p>Click to upload files — PDFs, images, or documents</p>
+        </div>
+        <input type="file" id="file2-input-${hubId}" style="display:none;" multiple accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" onchange="handleHub2Upload('${hubId}', this)">
+        <div class="hub-file-list" id="files2-${hubId}">
+          ${state.files.map((f, i) => `
+            <div class="hub-file-item">
+              <span>📄</span><span>${f.name}</span>
+              <span style="color:var(--muted);font-size:11px;">${f.size}</span>
+              <button class="tour-remove" onclick="removeHub2File('${hubId}', ${i})">✕</button>
+            </div>`).join('')}
+        </div>
+      </div>`;
+  }
+
+  function toggleHub2Panel(panelId) {
+    const p = document.getElementById('panel2-' + panelId);
+    if (p) p.classList.toggle('open');
+  }
+
+  function addHub2Link(hubId) {
+    const label = document.getElementById('link2-label-' + hubId).value.trim();
+    const url = document.getElementById('link2-url-' + hubId).value.trim();
+    if (!label || !url) return;
+    hub2State[hubId].links.push({ label, url });
+    document.getElementById('link2-label-' + hubId).value = '';
+    document.getElementById('link2-url-' + hubId).value = '';
+    toggleHub2Panel(hubId + '-link');
+    renderHub2(hubId);
+  }
+
+  function removeHub2Link(hubId, idx) {
+    hub2State[hubId].links.splice(idx, 1);
+    renderHub2(hubId);
+  }
+
+  function addHub2Doc(hubId) {
+    const name = document.getElementById('doc2-name-' + hubId).value.trim();
+    if (!name) return;
+    const status = document.getElementById('doc2-status-' + hubId).value;
+    const notes = document.getElementById('doc2-notes-' + hubId).value.trim();
+    hub2State[hubId].docs.push({ name, status, notes });
+    document.getElementById('doc2-name-' + hubId).value = '';
+    document.getElementById('doc2-notes-' + hubId).value = '';
+    toggleHub2Panel(hubId + '-doc');
+    renderHub2(hubId);
+  }
+
+  function removeHub2Doc(hubId, idx) {
+    hub2State[hubId].docs.splice(idx, 1);
+    renderHub2(hubId);
+  }
+
+  function handleHub2Upload(hubId, input) {
+    Array.from(input.files).forEach(f => {
+      const size = f.size < 1024*1024 ? (f.size/1024).toFixed(1)+' KB' : (f.size/1024/1024).toFixed(1)+' MB';
+      hub2State[hubId].files.push({ name: f.name, size });
+    });
+    renderHub2(hubId);
+    input.value = '';
+  }
+
+  function removeHub2File(hubId, idx) {
+    hub2State[hubId].files.splice(idx, 1);
+    renderHub2(hubId);
+  }
+
+  // ——— TOUR CALENDAR 2 (Property Tours section page) ———
+  let calDate2 = new Date();
+  let selectedDate2 = null;
+
+  function toggleCalendar2() {
+    const cal = document.getElementById('tour-calendar2');
+    cal.style.display = cal.style.display === 'none' ? 'block' : 'none';
+    if (cal.style.display === 'block') renderCalendar2();
+  }
+
+  function changeMonth2(dir) {
+    calDate2 = new Date(calDate2.getFullYear(), calDate2.getMonth() + dir, 1);
+    renderCalendar2();
+  }
+
+  function renderCalendar2() {
+    const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    const year = calDate2.getFullYear();
+    const month = calDate2.getMonth();
+    document.getElementById('cal-month-label2').textContent = months[month] + ' ' + year;
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const today = new Date();
+    const todayStr = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
+    const grid = document.getElementById('cal-grid2');
+    grid.innerHTML = '';
+    for (let i = 0; i < firstDay; i++) {
+      const blank = document.createElement('div');
+      blank.className = 'cal-day empty';
+      grid.appendChild(blank);
+    }
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dateStr = year + '-' + String(month+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+      const div = document.createElement('div');
+      div.className = 'cal-day';
+      div.textContent = d;
+      if (dateStr === todayStr) div.classList.add('today');
+      if (dateStr === selectedDate2) div.classList.add('selected');
+      if (tourListings[dateStr] && tourListings[dateStr].length > 0) {
+        div.classList.add('has-tours');
+        const dot = document.createElement('div');
+        dot.className = 'tour-dot';
+        div.appendChild(dot);
+      }
+      div.onclick = () => selectDate2(dateStr, d, months[month], year);
+      grid.appendChild(div);
+    }
+  }
+
+  function selectDate2(dateStr, day, monthName, year) {
+    selectedDate2 = dateStr;
+    renderCalendar2();
+    const panel = document.getElementById('add-listing-panel2');
+    panel.style.display = 'block';
+    document.getElementById('selected-date-label2').textContent = 'Add Listing — ' + monthName + ' ' + day + ', ' + year;
+    document.getElementById('new-mls2').focus();
+  }
+
+  function addListing2() {
+    const mls = document.getElementById('new-mls2').value.trim();
+    const street = document.getElementById('new-street2').value.trim();
+    const city = document.getElementById('new-city2').value.trim();
+    const statzip = document.getElementById('new-statzip2').value.trim();
+    if (!mls || !street || !city || !statzip) { alert('Please fill in all four fields.'); return; }
+    const slug = (street + ' ' + city + ' ' + statzip).toLowerCase().replace(/[^a-z0-9\s-]/g,'').trim().replace(/\s+/g,'-');
+    const url = 'https://www.callcarpenter.com/single-family/mra/' + mls + '/' + slug;
+    const displayAddress = street + ', ' + city + ', ' + statzip;
+    if (!tourListings[selectedDate2]) tourListings[selectedDate2] = [];
+    tourListings[selectedDate2].push({ mls, address: displayAddress, url, notes: '' });
+    document.getElementById('new-mls2').value = '';
+    document.getElementById('new-street2').value = '';
+    document.getElementById('new-city2').value = '';
+    document.getElementById('new-statzip2').value = '';
+    renderCalendar2();
+    renderToursList2();
+    // Also sync the dashboard calendar
+    renderCalendar();
+    renderToursList();
+  }
+
+  function renderToursList2() {
+    const container = document.getElementById('tours-list2');
+    if (!container) return;
+    const dates = Object.keys(tourListings).sort();
+    if (dates.length === 0) { container.innerHTML = '<p style="font-size:13px;color:var(--muted);padding:12px 0;">No tours scheduled yet. Click Schedule a Tour to get started.</p>'; return; }
+    const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    container.innerHTML = dates.map(dateStr => {
+      const [y, m, d] = dateStr.split('-').map(Number);
+      const dateObj = new Date(y, m-1, d);
+      const label = days[dateObj.getDay()] + ', ' + months[m-1] + ' ' + d + ', ' + y;
+      return `<div class="tour-date-group">
+        <div class="tour-date-header">📅 ${label}</div>
+        ${tourListings[dateStr].map((l, i) => `
+          <div class="tour-listing-item" style="flex-direction:column;align-items:stretch;gap:10px;">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div style="flex:1;">
+                <a href="${l.url}" target="_blank">🏠 ${l.address}</a>
+                <div class="tour-listing-mls">MLS# ${l.mls}</div>
+              </div>
+              <button class="tour-remove" onclick="removeListing2('${dateStr}', ${i})">✕</button>
+            </div>
+            <div style="border-top:1px solid var(--border);padding-top:10px;">
+              <label style="font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px;">📝 Your Notes After the Tour</label>
+              <textarea placeholder="What did you love? Any concerns? Questions to follow up on..."
+                style="font-family:'DM Sans',sans-serif;font-size:13px;width:100%;border:1px solid var(--border);border-radius:6px;padding:8px 10px;background:var(--off-white);outline:none;resize:vertical;min-height:70px;color:var(--text);transition:border-color 0.15s;"
+                onfocus="this.style.borderColor='var(--red)'"
+                onblur="this.style.borderColor='var(--border)'"
+                oninput="saveTourNote('${dateStr}', ${i}, this.value)"
+              >${l.notes || ''}</textarea>
+            </div>
+          </div>`).join('')}
+      </div>`;
+    }).join('');
+  }
+
+  function removeListing2(dateStr, idx) {
+    tourListings[dateStr].splice(idx, 1);
+    if (tourListings[dateStr].length === 0) delete tourListings[dateStr];
+    renderCalendar2();
+    renderToursList2();
+    renderCalendar();
+    renderToursList();
+  }
+
+  // ——— HUB SYSTEM ———
+  const hubState = {};
+
+  function getTabByPage(pageId) {
+    return document.querySelector('[onclick*="showPage(\''+pageId+'\')"]') ||
+           document.querySelector('[onclick*='showPage(\\''+pageId+'\\'')]');
+  }
+
+  function initHub(hubId, prefilledLinks) {
+    hubState[hubId] = { links: [...prefilledLinks], docs: [], files: [] };
+    renderHub(hubId);
+  }
+
+  function renderHub(hubId) {
+    const container = document.getElementById('hub-' + hubId);
+    if (!container) return;
+    const state = hubState[hubId];
+
+    container.innerHTML = `
+      <!-- LINKS SECTION -->
+      <div class="hub-section">
+        <div class="hub-section-title">
+          <div class="hub-section-title-left">🔗 Links &amp; Resources</div>
+          <button class="hub-btn-sm hub-btn-outline" onclick="toggleHubPanel('${hubId}-link')">+ Add Link</button>
+        </div>
+        <div id="panel-${hubId}-link" class="hub-add-panel">
+          <input class="hub-input" id="link-label-${hubId}" placeholder="Link label (e.g. My Lender Portal)">
+          <input class="hub-input" id="link-url-${hubId}" placeholder="https://...">
+          <div style="display:flex;gap:8px;margin-top:4px;">
+            <button class="hub-btn-sm hub-btn-red" onclick="addHubLink('${hubId}')">Add</button>
+            <button class="hub-btn-sm hub-btn-outline" onclick="toggleHubPanel('${hubId}-link')">Cancel</button>
+          </div>
+        </div>
+        <div id="links-${hubId}">
+          ${state.links.map((l, i) => `
+            <div class="hub-link-item">
+              <span class="link-icon">🔗</span>
+              <a href="${l.url}" target="_blank">${l.label}</a>
+              <button class="tour-remove" onclick="removeHubLink('${hubId}', ${i})">✕</button>
+            </div>`).join('')}
+        </div>
+      </div>
+
+      <!-- DOCUMENTS SECTION -->
+      <div class="hub-section">
+        <div class="hub-section-title">
+          <div class="hub-section-title-left">📄 Documents</div>
+          <button class="hub-btn-sm hub-btn-outline" onclick="toggleHubPanel('${hubId}-doc')">+ Add Document</button>
+        </div>
+        <div id="panel-${hubId}-doc" class="hub-add-panel">
+          <input class="hub-input" id="doc-name-${hubId}" placeholder="Document name (e.g. Amendment #1, Earnest Money Receipt)">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+            <select class="hub-input" id="doc-status-${hubId}" style="margin-bottom:0;">
+              <option value="status-pending">Pending</option>
+              <option value="status-signed">Signed</option>
+              <option value="status-required">Action Needed</option>
+              <option value="status-optional">Upcoming</option>
+            </select>
+            <input class="hub-input" id="doc-notes-${hubId}" placeholder="Notes (optional)" style="margin-bottom:0;">
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button class="hub-btn-sm hub-btn-red" onclick="addHubDoc('${hubId}')">Add</button>
+            <button class="hub-btn-sm hub-btn-outline" onclick="toggleHubPanel('${hubId}-doc')">Cancel</button>
+          </div>
+        </div>
+        <div id="docs-${hubId}">
+          ${state.docs.length === 0 ? '<p style="font-size:13px;color:var(--muted);padding:8px 0;">No documents added yet.</p>' :
+            state.docs.map((d, i) => `
+              <div class="hub-doc-item">
+                <div class="doc-icon" style="width:32px;height:32px;font-size:15px;">📄</div>
+                <div class="doc-info"><h4>${d.name}</h4><p>${d.notes || ''}</p></div>
+                <span class="doc-status ${d.status}">${STATUS_LABELS[d.status]}</span>
+                <button class="tour-remove" onclick="removeHubDoc('${hubId}', ${i})">✕</button>
+              </div>`).join('')}
+        </div>
+      </div>
+
+      <!-- FILE UPLOAD SECTION -->
+      <div class="hub-section">
+        <div class="hub-section-title">
+          <div class="hub-section-title-left">📎 File Uploads</div>
+        </div>
+        <div class="hub-upload-area" onclick="document.getElementById('file-input-${hubId}').click()">
+          <div style="font-size:28px;">⬆️</div>
+          <p>Click to upload files — PDFs, images, or documents</p>
+          <p style="font-size:11px;margin-top:4px;">Files are stored in your browser session</p>
+        </div>
+        <input type="file" id="file-input-${hubId}" style="display:none;" multiple accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" onchange="handleHubUpload('${hubId}', this)">
+        <div class="hub-file-list" id="files-${hubId}">
+          ${state.files.map((f, i) => `
+            <div class="hub-file-item">
+              <span>📄</span>
+              <span>${f.name}</span>
+              <span style="color:var(--muted);font-size:11px;">${f.size}</span>
+              <button class="tour-remove" onclick="removeHubFile('${hubId}', ${i})">✕</button>
+            </div>`).join('')}
+        </div>
+      </div>`;
+  }
+
+  function toggleHubPanel(panelId) {
+    const p = document.getElementById('panel-' + panelId);
+    p.classList.toggle('open');
+  }
+
+  function addHubLink(hubId) {
+    const label = document.getElementById('link-label-' + hubId).value.trim();
+    const url = document.getElementById('link-url-' + hubId).value.trim();
+    if (!label || !url) return;
+    hubState[hubId].links.push({ label, url });
+    document.getElementById('link-label-' + hubId).value = '';
+    document.getElementById('link-url-' + hubId).value = '';
+    toggleHubPanel(hubId + '-link');
+    renderHub(hubId);
+  }
+
+  function removeHubLink(hubId, idx) {
+    hubState[hubId].links.splice(idx, 1);
+    renderHub(hubId);
+  }
+
+  function addHubDoc(hubId) {
+    const name = document.getElementById('doc-name-' + hubId).value.trim();
+    if (!name) return;
+    const status = document.getElementById('doc-status-' + hubId).value;
+    const notes = document.getElementById('doc-notes-' + hubId).value.trim();
+    hubState[hubId].docs.push({ name, status, notes });
+    document.getElementById('doc-name-' + hubId).value = '';
+    document.getElementById('doc-notes-' + hubId).value = '';
+    toggleHubPanel(hubId + '-doc');
+    renderHub(hubId);
+  }
+
+  function removeHubDoc(hubId, idx) {
+    hubState[hubId].docs.splice(idx, 1);
+    renderHub(hubId);
+  }
+
+  function handleHubUpload(hubId, input) {
+    const files = Array.from(input.files);
+    files.forEach(f => {
+      const size = f.size < 1024*1024 ? (f.size/1024).toFixed(1)+' KB' : (f.size/1024/1024).toFixed(1)+' MB';
+      hubState[hubId].files.push({ name: f.name, size });
+    });
+    renderHub(hubId);
+    input.value = '';
+  }
+
+  function removeHubFile(hubId, idx) {
+    hubState[hubId].files.splice(idx, 1);
+    renderHub(hubId);
+  }
+
+  // ——— TOUR CALENDAR ———
+  let calDate = new Date();
+  let selectedDate = null;
+  let tourListings = {}; // { 'YYYY-MM-DD': [{mls, address, url}] }
+
+  function toggleCalendar() {
+    const cal = document.getElementById('tour-calendar');
+    cal.style.display = cal.style.display === 'none' ? 'block' : 'none';
+    if (cal.style.display === 'block') renderCalendar();
+  }
+
+  function changeMonth(dir) {
+    calDate = new Date(calDate.getFullYear(), calDate.getMonth() + dir, 1);
+    renderCalendar();
+  }
+
+  function renderCalendar() {
+    const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    const year = calDate.getFullYear();
+    const month = calDate.getMonth();
+    document.getElementById('cal-month-label').textContent = months[month] + ' ' + year;
+
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const today = new Date();
+    const todayStr = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
+
+    const grid = document.getElementById('cal-grid');
+    grid.innerHTML = '';
+
+    for (let i = 0; i < firstDay; i++) {
+      const blank = document.createElement('div');
+      blank.className = 'cal-day empty';
+      grid.appendChild(blank);
+    }
+
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dateStr = year + '-' + String(month+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+      const div = document.createElement('div');
+      div.className = 'cal-day';
+      div.textContent = d;
+      if (dateStr === todayStr) div.classList.add('today');
+      if (dateStr === selectedDate) div.classList.add('selected');
+      if (tourListings[dateStr] && tourListings[dateStr].length > 0) {
+        div.classList.add('has-tours');
+        const dot = document.createElement('div');
+        dot.className = 'tour-dot';
+        div.appendChild(dot);
+      }
+      div.onclick = () => selectDate(dateStr, d, months[month], year);
+      grid.appendChild(div);
+    }
+  }
+
+  function selectDate(dateStr, day, monthName, year) {
+    selectedDate = dateStr;
+    renderCalendar();
+    const panel = document.getElementById('add-listing-panel');
+    panel.style.display = 'block';
+    document.getElementById('selected-date-label').textContent = 'Add Listing — ' + monthName + ' ' + day + ', ' + year;
+    document.getElementById('new-mls').focus();
+  }
+
+  function slugify(str) {
+    return str.toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, '')
+      .trim()
+      .replace(/\s+/g, '-');
+  }
+
+  function addListing() {
+    const mls = document.getElementById('new-mls').value.trim();
+    const street = document.getElementById('new-street').value.trim();
+    const city = document.getElementById('new-city').value.trim();
+    const statzip = document.getElementById('new-statzip').value.trim();
+
+    if (!mls || !street || !city || !statzip) {
+      alert('Please fill in all four fields to generate the listing link.');
+      return;
+    }
+
+    // Build Carpenter URL: /single-family/mra/[MLS]/[street]-[city]-[state]-[zip]
+    const fullAddress = street + ' ' + city + ' ' + statzip;
+    const slug = slugify(fullAddress);
+    const url = 'https://www.callcarpenter.com/single-family/mra/' + mls + '/' + slug;
+    const displayAddress = street + ', ' + city + ', ' + statzip;
+
+    if (!tourListings[selectedDate]) tourListings[selectedDate] = [];
+    tourListings[selectedDate].push({ mls, address: displayAddress, url });
+
+    // Clear fields
+    document.getElementById('new-mls').value = '';
+    document.getElementById('new-street').value = '';
+    document.getElementById('new-city').value = '';
+    document.getElementById('new-statzip').value = '';
+
+    renderCalendar();
+    renderToursList();
+  }
+
+  function removeListing(dateStr, idx) {
+    tourListings[dateStr].splice(idx, 1);
+    if (tourListings[dateStr].length === 0) delete tourListings[dateStr];
+    renderCalendar();
+    renderToursList();
+  }
+
+  function renderToursList() {
+    const container = document.getElementById('tours-list');
+    const dates = Object.keys(tourListings).sort();
+    if (dates.length === 0) { container.innerHTML = ''; return; }
+
+    const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+
+    container.innerHTML = dates.map(dateStr => {
+      const [y, m, d] = dateStr.split('-').map(Number);
+      const dateObj = new Date(y, m-1, d);
+      const label = days[dateObj.getDay()] + ', ' + months[m-1] + ' ' + d + ', ' + y;
+      const listings = tourListings[dateStr];
+      return `<div class="tour-date-group">
+        <div class="tour-date-header">📅 ${label}</div>
+        ${listings.map((l, i) => `
+          <div class="tour-listing-item" style="flex-direction:column;align-items:stretch;gap:10px;">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div style="flex:1;">
+                <a href="${l.url}" target="_blank">🏠 ${l.address}</a>
+                <div class="tour-listing-mls">MLS# ${l.mls}</div>
+              </div>
+              <button class="tour-remove" onclick="removeListing('${dateStr}', ${i})" title="Remove">✕</button>
+            </div>
+            <div style="border-top:1px solid var(--border);padding-top:10px;">
+              <label style="font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px;">📝 Your Notes After the Tour</label>
+              <textarea
+                placeholder="What did you love? Any concerns? Questions to follow up on..."
+                style="font-family:'DM Sans',sans-serif;font-size:13px;width:100%;border:1px solid var(--border);border-radius:6px;padding:8px 10px;background:var(--off-white);outline:none;resize:vertical;min-height:70px;color:var(--text);transition:border-color 0.15s;"
+                onfocus="this.style.borderColor='var(--red)'"
+                onblur="this.style.borderColor='var(--border)'"
+                oninput="saveTourNote('${dateStr}', ${i}, this.value)"
+              >${l.notes || ''}</textarea>
+            </div>
+          </div>`).join('')}
+      </div>`;
+    }).join('');
+  }
+
+  function saveTourNote(dateStr, idx, value) {
+    if (tourListings[dateStr] && tourListings[dateStr][idx] !== undefined) {
+      tourListings[dateStr][idx].notes = value;
+    }
+  }
+
+
+  function syncInspectionDates(sourceInput, targetId) {
+    const target = document.getElementById(targetId);
+    if (target) target.value = sourceInput.value;
+    // Also sync the other direction
+    const mirror = document.getElementById(targetId === 'date-inspection' ? 'insp-date-inspection' : 'insp-date-response');
+    if (mirror && mirror !== sourceInput) mirror.value = sourceInput.value;
+  }
+
+
+
+  function syncAllDatesToInspection() {
+    const di = document.getElementById('date-inspection');
+    const dr = document.getElementById('date-response');
+    const ii = document.getElementById('insp-date-inspection');
+    const ir = document.getElementById('insp-date-response');
+    if (di && ii) ii.value = di.value;
+    if (dr && ir) ir.value = dr.value;
+  }
+
+  function syncHeaderFields() {
+    const name = document.getElementById('header-client-name').value.trim();
+    const addr = document.getElementById('header-address').value.trim();
+    document.title = name ? 'Jason Pearson – ' + name : 'Jason Pearson – Client Portal';
+  }
+
+  let settlementFiles = [];
+
+  function handleSettlementUpload(input) {
+    const files = Array.from(input.files);
+    files.forEach(f => {
+      const size = f.size < 1024*1024 ? (f.size/1024).toFixed(1)+' KB' : (f.size/1024/1024).toFixed(1)+' MB';
+      settlementFiles.push({ name: f.name, size, date: new Date().toLocaleDateString() });
+    });
+    renderSettlementFiles();
+    input.value = '';
+  }
+
+  function removeSettlementFile(idx) {
+    settlementFiles.splice(idx, 1);
+    renderSettlementFiles();
+  }
+
+  function renderSettlementFiles() {
+    const container = document.getElementById('settlement-file-list');
+    if (!container) return;
+    if (settlementFiles.length === 0) { container.innerHTML = ''; return; }
+    container.innerHTML = settlementFiles.map((f, i) => `
+      <div class="hub-file-item">
+        <span style="font-size:18px;">📋</span>
+        <span style="flex:1;font-weight:500;">${f.name}</span>
+        <span style="color:var(--muted);font-size:11px;">${f.size}</span>
+        <span style="color:var(--muted);font-size:11px;">${f.date}</span>
+        <button class="remove-btn" onclick="removeSettlementFile(${i})" style="font-size:15px;">✕</button>
+      </div>`).join('');
+  }
+
+  initHub2('closing', [
+    {label:'CFPB – What to Bring to Closing', url:'https://www.consumerfinance.gov/ask-cfpb/what-happens-at-a-closing-en-1917'},
+    {label:'Indiana Title Association', url:'https://www.intitle.org'},
+    {label:'USPS – Change of Address', url:'https://moversguide.usps.com'},
+    {label:'IRS – Homeowner Tax Deductions', url:'https://www.irs.gov/taxtopics/tc515'},
+    {label:'Indiana BMV – Update Your Address', url:'https://www.in.gov/bmv/license-plates-and-registration/address-change'}
+  ]);
+
+  function syncClosingDate(input) {
+    const dashboard = document.getElementById('date-closing');
+    if (dashboard) dashboard.value = input.value;
+    updateClosingCountdown(input.value);
+  }
+
+  function updateClosingCountdown(dateVal) {
+    const el = document.getElementById('closing-countdown');
+    if (!el || !dateVal) { if(el) el.textContent = '—'; return; }
+    const closing = new Date(dateVal + 'T00:00:00');
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    const diff = Math.ceil((closing - today) / (1000 * 60 * 60 * 24));
+    if (diff > 0) el.textContent = diff;
+    else if (diff === 0) el.textContent = '🎉';
+    else el.textContent = '✓';
+  }
+
+  let personalVendors = [];
+
+  function addPersonalVendor() {
+    const category = document.getElementById('vendor-category').value;
+    const name = document.getElementById('vendor-name').value.trim();
+    const phone = document.getElementById('vendor-phone').value.trim();
+    const email = document.getElementById('vendor-email').value.trim();
+    const url = document.getElementById('vendor-url').value.trim();
+    const notes = document.getElementById('vendor-notes').value.trim();
+    if (!name) { document.getElementById('vendor-name').focus(); return; }
+    personalVendors.push({ category, name, phone, email, url, notes });
+    document.getElementById('vendor-category').value = '';
+    document.getElementById('vendor-name').value = '';
+    document.getElementById('vendor-phone').value = '';
+    document.getElementById('vendor-email').value = '';
+    document.getElementById('vendor-url').value = '';
+    document.getElementById('vendor-notes').value = '';
+    document.getElementById('add-vendor-panel').style.display = 'none';
+    renderPersonalVendors();
+  }
+
+  function removePersonalVendor(idx) {
+    personalVendors.splice(idx, 1);
+    renderPersonalVendors();
+  }
+
+  function renderPersonalVendors() {
+    const container = document.getElementById('personal-vendors-list');
+    if (personalVendors.length === 0) {
+      container.innerHTML = '<p style="font-size:13px;color:var(--muted);padding:4px 0;">No personal recommendations added yet.</p>';
+      return;
+    }
+    container.innerHTML = personalVendors.map((v, i) => `
+      <div style="background:var(--white);border:1px solid var(--border);border-radius:8px;padding:14px 18px;display:flex;align-items:flex-start;gap:14px;">
+        <div style="flex:1;">
+          ${v.category ? `<div style="font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--red);margin-bottom:4px;">${v.category}</div>` : ''}
+          <div style="font-size:14px;font-weight:600;margin-bottom:4px;">${v.name}</div>
+          <div style="display:flex;flex-wrap:wrap;gap:12px;">
+            ${v.phone ? `<a href="tel:${v.phone.replace(/\D/g,'')}" style="font-size:12px;color:var(--muted);text-decoration:none;">📞 ${v.phone}</a>` : ''}
+            ${v.email ? `<a href="mailto:${v.email}" style="font-size:12px;color:var(--muted);text-decoration:none;">✉️ ${v.email}</a>` : ''}
+            ${v.url ? `<a href="${v.url}" target="_blank" style="font-size:12px;color:var(--red);text-decoration:none;">🔗 Website</a>` : ''}
+          </div>
+          ${v.notes ? `<div style="font-size:12px;color:var(--muted);margin-top:6px;font-style:italic;">${v.notes}</div>` : ''}
+        </div>
+        <button class="remove-btn" onclick="removePersonalVendor(${i})" style="font-size:15px;">✕</button>
+      </div>`).join('');
+  }
+
+  renderPersonalVendors();
+
+  // Initialize all hub2 sections after DOM is ready
+
+document.addEventListener('DOMContentLoaded', function() {
+
+  // Expose functions to global scope
+  window.showPage = showPage;
+  window.showSection = showSection;
+  window.filterDocs = filterDocs;
+  window.toggleAddDoc = toggleAddDoc;
+  window.addDocument = addDocument;
+  window.removeDoc = removeDoc;
+  window.changeDocStatus = changeDocStatus;
+  window.submitIntake = submitIntake;
+  window.addChild = addChild;
+  window.addPet = addPet;
+  window.toggleCalendar2 = toggleCalendar2;
+  window.changeMonth2 = changeMonth2;
+  window.addListing2 = addListing2;
+  window.removeListing2 = removeListing2;
+  window.addPersonalVendor = addPersonalVendor;
+  window.removePersonalVendor = removePersonalVendor;
+  window.handleSettlementUpload = handleSettlementUpload;
+  window.removeSettlementFile = removeSettlementFile;
+
+    initHub2('agency', [
+      {label:'Indiana Buyer Agency Agreement (IAR Forms)', url:'https://www.inrealtors.com/forms'},
+      {label:'Carpenter Realtors Agent Directory', url:'https://www.callcarpenter.com/agents'},
+      {label:'What is a Buyer Agency Agreement?', url:'https://www.nar.realtor/buyers'}
+    ]);
+    initHub2('tours', [
+      {label:'Search Listings – Carpenter Realtors', url:'https://www.callcarpenter.com/search'},
+      {label:'Indiana MLS / BLC Search', url:'https://www.indyrealtors.com'},
+      {label:'Google Maps – Plan Your Route', url:'https://maps.google.com'}
+    ]);
+    initHub2('offer', [
+      {label:'Wire Fraud Warning – FBI', url:'https://www.fbi.gov/scams-and-safety/common-scams-and-crimes/real-estate-wire-fraud'},
+      {label:'Home Experts of Indiana', url:'https://homeexpertsofindiana.com/'},
+      {label:'AllCheck Inspections', url:'https://allcheck.biz/'},
+      {label:'IAR Forms Library', url:'https://www.inrealtors.com/forms'},
+      {label:'CFPB – Understanding Closing Costs', url:'https://www.consumerfinance.gov/ask-cfpb/what-are-closing-costs-en-1845'}
+    ]);
+    initHub2('inspection', [
+      {label:'ASHI – Find a Home Inspector', url:'https://www.homeinspector.org/find-inspector'},
+      {label:'Indiana State Dept. of Health – Radon Info', url:'https://www.in.gov/health/radon'},
+      {label:'HUD – Understanding Your Appraisal', url:'https://www.hud.gov/topics/buying_a_home'},
+      {label:'Home Experts of Indiana', url:'https://homeexpertsofindiana.com/'},
+      {label:'AllCheck Inspections', url:'https://allcheck.biz/'}
+    ]);
+    initHub2('utilities', [
+      {label:'USPS – Change of Address', url:'https://moversguide.usps.com'},
+      {label:'Indiana BMV – Update Your Address', url:'https://www.in.gov/bmv/license-plates-and-registration/address-change'}
+    ]);
+    initHub2('vendors', []);
+    initHub2('closing', [
+      {label:'CFPB – What to Bring to Closing', url:'https://www.consumerfinance.gov/ask-cfpb/what-happens-at-a-closing-en-1917'},
+      {label:'Indiana Title Association', url:'https://www.intitle.org'},
+      {label:'USPS – Change of Address', url:'https://moversguide.usps.com'},
+      {label:'IRS – Homeowner Tax Deductions', url:'https://www.irs.gov/taxtopics/tc515'},
+      {label:'Indiana BMV – Update Your Address', url:'https://www.in.gov/bmv/license-plates-and-registration/address-change'}
+    ]);
+    initHub2('search', [
+      {label:'Search Listings – Carpenter Realtors', url:'https://www.callcarpenter.com/search'},
+      {label:'Indiana MLS / BLC Search', url:'https://www.indyrealtors.com'},
+      {label:'School District Ratings – GreatSchools', url:'https://www.greatschools.org'},
+      {label:'Neighborhood Info – Niche.com', url:'https://www.niche.com/places-to-live/search/best-places-to-live/s/indiana'},
+      {label:'Cost of Living Calculator', url:'https://www.nerdwallet.com/cost-of-living-calculator'}
+    ]);
+    renderPersonalVendors();
+    renderDocs();
+  });
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Jason Pearson – Client Portal</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -757,8 +1717,12 @@
   }
   .back-btn:hover { border-color: var(--red); color: var(--red); }
 </style>
+
 </head>
 <body>
+
+
+
 
 <header>
   <div class="header-inner">
@@ -1963,943 +2927,6 @@
   </div>
 </div>
 
-<script>
-  function showPage(id, tabEl) {
-    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-    document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-    const page = document.getElementById('page-' + id);
-    if (page) { page.classList.add('active'); window.scrollTo(0, 0); }
-    if (tabEl) tabEl.classList.add('active');
-  }
 
-  let childCount = 0;
-  function addChild() {
-    childCount++;
-    const id = 'child-' + childCount;
-    const div = document.createElement('div');
-    div.className = 'repeat-group';
-    div.id = id;
-    div.innerHTML = `
-      <div class="repeat-row">
-        <div class="form-group"><label>Child's First Name</label><input type="text" placeholder="Name"></div>
-        <div class="form-group"><label>Age</label><input type="text" placeholder="Age"></div>
-        <div class="form-group"><label>Birthday</label><input type="date"></div>
-        <div class="form-group"><label>Interests</label><input type="text" placeholder="Sports, art, music..."></div>
-        <button type="button" class="remove-btn" onclick="document.getElementById('${id}').remove()">✕</button>
-      </div>`;
-    document.getElementById('children-container').appendChild(div);
-  }
-
-  let petCount = 0;
-  function addPet() {
-    petCount++;
-    const id = 'pet-' + petCount;
-    const div = document.createElement('div');
-    div.className = 'repeat-group';
-    div.id = id;
-    div.innerHTML = `
-      <div class="repeat-row">
-        <div class="form-group"><label>Pet's Name</label><input type="text" placeholder="Name"></div>
-        <div class="form-group"><label>Type</label><select><option>Dog</option><option>Cat</option><option>Bird</option><option>Other</option></select></div>
-        <div class="form-group"><label>Breed (optional)</label><input type="text" placeholder="Breed"></div>
-        <button type="button" class="remove-btn" onclick="document.getElementById('${id}').remove()">✕</button>
-      </div>`;
-    document.getElementById('pets-container').appendChild(div);
-  }
-
-  function submitIntake(e) {
-    e.preventDefault();
-    document.getElementById('success-overlay').classList.add('show');
-    showPage('dashboard', document.querySelectorAll('.nav-tab')[0]);
-  }
-
-  // ——— DOCUMENTS ———
-  const STATUS_LABELS = {
-    'status-signed': 'Signed',
-    'status-pending': 'Pending',
-    'status-required': 'Action Needed',
-    'status-optional': 'Upcoming'
-  };
-  const DOC_ICONS = {
-    'Amendments': '✏️', 'Receipts': '🧾', 'Disclosures': '📢',
-    'Inspection': '🔍', 'Closing': '🏠', 'Buyer Documents': '👤',
-    'Seller Documents': '🏡', '': '📄', 'General': '📄', 'Other': '📎'
-  };
-
-  let documents = [
-    { id: 1, name: 'Client Intake Form', category: 'Buyer Documents', status: 'status-required', notes: 'Please complete the intake form' },
-    { id: 2, name: 'Buyer Representation Agreement', category: 'Buyer Documents', status: 'status-signed', notes: 'Signed · April 2025' },
-    { id: 3, name: 'Pre-Approval Letter', category: 'Buyer Documents', status: 'status-pending', notes: 'Upload or provide from your lender' },
-    { id: 4, name: 'Purchase Agreement', category: 'Buyer Documents', status: 'status-optional', notes: 'Will be provided when an offer is made' },
-    { id: 5, name: 'Inspection Report', category: 'Inspection', status: 'status-optional', notes: 'Will be available after property inspection' },
-    { id: 6, name: 'Appraisal Report', category: 'Inspection', status: 'status-optional', notes: 'Will be available after lender appraisal' },
-    { id: 7, name: 'Closing Disclosure', category: 'Closing', status: 'status-optional', notes: 'Will be provided 3 days before closing' }
-  ];
-  let docCounter = 7;
-  let activeFilter = 'all';
-
-  function renderDocs() {
-    const list = document.getElementById('doc-list');
-    const noMsg = document.getElementById('no-docs-msg');
-    const filtered = activeFilter === 'all' ? documents : documents.filter(d => d.category === activeFilter);
-    if (filtered.length === 0) {
-      list.innerHTML = '';
-      noMsg.style.display = 'block';
-      return;
-    }
-    noMsg.style.display = 'none';
-    list.innerHTML = filtered.map(doc => {
-      const icon = DOC_ICONS[doc.category] || '📄';
-      const label = STATUS_LABELS[doc.status] || 'Pending';
-      const catTag = doc.category ? `<span style="font-size:11px;color:var(--muted);margin-top:2px;display:block;">${doc.category}</span>` : '';
-      return `<div class="doc-item" id="doc-item-${doc.id}">
-        <div class="doc-icon">${icon}</div>
-        <div class="doc-info">
-          <h4>${doc.name}</h4>
-          ${catTag}
-          <p>${doc.notes || ''}</p>
-        </div>
-        <span class="doc-status ${doc.status}">${label}</span>
-      </div>`;
-    }).join('');
-  }
-
-  function toggleAddDoc() {
-    const panel = document.getElementById('add-doc-panel');
-    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
-    if (panel.style.display === 'block') document.getElementById('new-doc-name').focus();
-  }
-
-  function addDocument() {
-    const name = document.getElementById('new-doc-name').value.trim();
-    if (!name) { document.getElementById('new-doc-name').focus(); return; }
-    const category = document.getElementById('new-doc-category').value;
-    const status = document.getElementById('new-doc-status').value;
-    const notes = document.getElementById('new-doc-notes').value.trim();
-    documents.push({ id: docCounter++, name, category, status, notes });
-    document.getElementById('new-doc-name').value = '';
-    document.getElementById('new-doc-notes').value = '';
-    document.getElementById('new-doc-category').value = '';
-    document.getElementById('new-doc-status').value = 'status-pending';
-    document.getElementById('add-doc-panel').style.display = 'none';
-    renderDocs();
-  }
-
-  function removeDoc(id) {
-    documents = documents.filter(d => d.id !== id);
-    renderDocs();
-  }
-
-  function changeDocStatus(id, newStatus) {
-    const doc = documents.find(d => d.id === id);
-    if (doc) { doc.status = newStatus; renderDocs(); }
-  }
-
-  function filterDocs(cat, btn) {
-    activeFilter = cat;
-    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    renderDocs();
-  }
-
-  renderDocs();
-
-
-
-
-
-  // ——— SECTION NAVIGATION ———
-  function getNavTab(pageId) {
-    const tabs = document.querySelectorAll('.nav-tab');
-    for (let t of tabs) {
-      if (t.getAttribute('onclick') && t.getAttribute('onclick').includes("'" + pageId + "'")) return t;
-    }
-    return null;
-  }
-
-  function showSection(sectionId) {
-    // Hide all pages, clear nav active state
-    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-    document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-    // Show the section page
-    const page = document.getElementById('page-section-' + sectionId);
-    if (page) {
-      page.classList.add('active');
-      window.scrollTo(0, 0);
-    }
-    // Sync inspection dates
-    if (sectionId === 'tab-inspection') {
-      const di = document.getElementById('date-inspection');
-      const dr = document.getElementById('date-response');
-      const ii = document.getElementById('insp-date-inspection');
-      const ir = document.getElementById('insp-date-response');
-      if (di && ii) ii.value = di.value;
-      if (dr && ir) ir.value = dr.value;
-    }
-    // Sync closing date and countdown
-    if (sectionId === 'tab-closing') {
-      const dc = document.getElementById('date-closing');
-      const cd = document.getElementById('closing-date-display');
-      if (dc && cd) { cd.value = dc.value; updateClosingCountdown(dc.value); }
-    }
-  }
-
-  // ——— HUB2 SYSTEM (for section pages) ———
-  const hub2State = {};
-
-  function initHub2(hubId, prefilledLinks) {
-    if (!hub2State[hubId]) {
-      hub2State[hubId] = { links: [...prefilledLinks], docs: [], files: [] };
-    }
-    renderHub2(hubId);
-  }
-
-  function renderHub2(hubId) {
-    const container = document.getElementById('hub2-' + hubId);
-    if (!container) return;
-    const state = hub2State[hubId];
-
-    container.innerHTML = `
-      <div class="hub-section">
-        <div class="hub-section-title">
-          <div class="hub-section-title-left">🔗 Links &amp; Resources</div>
-          <button class="hub-btn-sm hub-btn-outline" onclick="toggleHub2Panel('${hubId}-link')">+ Add Link</button>
-        </div>
-        <div id="panel2-${hubId}-link" class="hub-add-panel">
-          <input class="hub-input" id="link2-label-${hubId}" placeholder="Link label (e.g. My Lender Portal)">
-          <input class="hub-input" id="link2-url-${hubId}" placeholder="https://...">
-          <div style="display:flex;gap:8px;margin-top:4px;">
-            <button class="hub-btn-sm hub-btn-red" onclick="addHub2Link('${hubId}')">Add</button>
-            <button class="hub-btn-sm hub-btn-outline" onclick="toggleHub2Panel('${hubId}-link')">Cancel</button>
-          </div>
-        </div>
-        <div id="links2-${hubId}">
-          ${state.links.map((l, i) => `
-            <div class="hub-link-item">
-              <span class="link-icon">🔗</span>
-              <a href="${l.url}" target="_blank">${l.label}</a>
-              <button class="tour-remove" onclick="removeHub2Link('${hubId}', ${i})">✕</button>
-            </div>`).join('')}
-        </div>
-      </div>
-
-      <div class="hub-section">
-        <div class="hub-section-title">
-          <div class="hub-section-title-left">📄 Documents</div>
-          <button class="hub-btn-sm hub-btn-outline" onclick="toggleHub2Panel('${hubId}-doc')">+ Add Document</button>
-        </div>
-        <div id="panel2-${hubId}-doc" class="hub-add-panel">
-          <input class="hub-input" id="doc2-name-${hubId}" placeholder="Document name">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
-            <select class="hub-input" id="doc2-status-${hubId}" style="margin-bottom:0;">
-              <option value="status-pending">Pending</option>
-              <option value="status-signed">Signed</option>
-              <option value="status-required">Action Needed</option>
-              <option value="status-optional">Upcoming</option>
-            </select>
-            <input class="hub-input" id="doc2-notes-${hubId}" placeholder="Notes (optional)" style="margin-bottom:0;">
-          </div>
-          <div style="display:flex;gap:8px;">
-            <button class="hub-btn-sm hub-btn-red" onclick="addHub2Doc('${hubId}')">Add</button>
-            <button class="hub-btn-sm hub-btn-outline" onclick="toggleHub2Panel('${hubId}-doc')">Cancel</button>
-          </div>
-        </div>
-        <div id="docs2-${hubId}">
-          ${state.docs.length === 0
-            ? '<p style="font-size:13px;color:var(--muted);padding:8px 0;">No documents added yet.</p>'
-            : state.docs.map((d, i) => `
-              <div class="hub-doc-item">
-                <div class="doc-icon" style="width:32px;height:32px;font-size:15px;">📄</div>
-                <div class="doc-info"><h4>${d.name}</h4><p>${d.notes||''}</p></div>
-                <span class="doc-status ${d.status}">${STATUS_LABELS[d.status]}</span>
-                <button class="tour-remove" onclick="removeHub2Doc('${hubId}', ${i})">✕</button>
-              </div>`).join('')}
-        </div>
-      </div>
-
-      <div class="hub-section">
-        <div class="hub-section-title">
-          <div class="hub-section-title-left">📎 File Uploads</div>
-        </div>
-        <div class="hub-upload-area" onclick="document.getElementById('file2-input-${hubId}').click()">
-          <div style="font-size:28px;">⬆️</div>
-          <p>Click to upload files — PDFs, images, or documents</p>
-        </div>
-        <input type="file" id="file2-input-${hubId}" style="display:none;" multiple accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" onchange="handleHub2Upload('${hubId}', this)">
-        <div class="hub-file-list" id="files2-${hubId}">
-          ${state.files.map((f, i) => `
-            <div class="hub-file-item">
-              <span>📄</span><span>${f.name}</span>
-              <span style="color:var(--muted);font-size:11px;">${f.size}</span>
-              <button class="tour-remove" onclick="removeHub2File('${hubId}', ${i})">✕</button>
-            </div>`).join('')}
-        </div>
-      </div>`;
-  }
-
-  function toggleHub2Panel(panelId) {
-    const p = document.getElementById('panel2-' + panelId);
-    if (p) p.classList.toggle('open');
-  }
-
-  function addHub2Link(hubId) {
-    const label = document.getElementById('link2-label-' + hubId).value.trim();
-    const url = document.getElementById('link2-url-' + hubId).value.trim();
-    if (!label || !url) return;
-    hub2State[hubId].links.push({ label, url });
-    document.getElementById('link2-label-' + hubId).value = '';
-    document.getElementById('link2-url-' + hubId).value = '';
-    toggleHub2Panel(hubId + '-link');
-    renderHub2(hubId);
-  }
-
-  function removeHub2Link(hubId, idx) {
-    hub2State[hubId].links.splice(idx, 1);
-    renderHub2(hubId);
-  }
-
-  function addHub2Doc(hubId) {
-    const name = document.getElementById('doc2-name-' + hubId).value.trim();
-    if (!name) return;
-    const status = document.getElementById('doc2-status-' + hubId).value;
-    const notes = document.getElementById('doc2-notes-' + hubId).value.trim();
-    hub2State[hubId].docs.push({ name, status, notes });
-    document.getElementById('doc2-name-' + hubId).value = '';
-    document.getElementById('doc2-notes-' + hubId).value = '';
-    toggleHub2Panel(hubId + '-doc');
-    renderHub2(hubId);
-  }
-
-  function removeHub2Doc(hubId, idx) {
-    hub2State[hubId].docs.splice(idx, 1);
-    renderHub2(hubId);
-  }
-
-  function handleHub2Upload(hubId, input) {
-    Array.from(input.files).forEach(f => {
-      const size = f.size < 1024*1024 ? (f.size/1024).toFixed(1)+' KB' : (f.size/1024/1024).toFixed(1)+' MB';
-      hub2State[hubId].files.push({ name: f.name, size });
-    });
-    renderHub2(hubId);
-    input.value = '';
-  }
-
-  function removeHub2File(hubId, idx) {
-    hub2State[hubId].files.splice(idx, 1);
-    renderHub2(hubId);
-  }
-
-  // ——— TOUR CALENDAR 2 (Property Tours section page) ———
-  let calDate2 = new Date();
-  let selectedDate2 = null;
-
-  function toggleCalendar2() {
-    const cal = document.getElementById('tour-calendar2');
-    cal.style.display = cal.style.display === 'none' ? 'block' : 'none';
-    if (cal.style.display === 'block') renderCalendar2();
-  }
-
-  function changeMonth2(dir) {
-    calDate2 = new Date(calDate2.getFullYear(), calDate2.getMonth() + dir, 1);
-    renderCalendar2();
-  }
-
-  function renderCalendar2() {
-    const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-    const year = calDate2.getFullYear();
-    const month = calDate2.getMonth();
-    document.getElementById('cal-month-label2').textContent = months[month] + ' ' + year;
-    const firstDay = new Date(year, month, 1).getDay();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const today = new Date();
-    const todayStr = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
-    const grid = document.getElementById('cal-grid2');
-    grid.innerHTML = '';
-    for (let i = 0; i < firstDay; i++) {
-      const blank = document.createElement('div');
-      blank.className = 'cal-day empty';
-      grid.appendChild(blank);
-    }
-    for (let d = 1; d <= daysInMonth; d++) {
-      const dateStr = year + '-' + String(month+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
-      const div = document.createElement('div');
-      div.className = 'cal-day';
-      div.textContent = d;
-      if (dateStr === todayStr) div.classList.add('today');
-      if (dateStr === selectedDate2) div.classList.add('selected');
-      if (tourListings[dateStr] && tourListings[dateStr].length > 0) {
-        div.classList.add('has-tours');
-        const dot = document.createElement('div');
-        dot.className = 'tour-dot';
-        div.appendChild(dot);
-      }
-      div.onclick = () => selectDate2(dateStr, d, months[month], year);
-      grid.appendChild(div);
-    }
-  }
-
-  function selectDate2(dateStr, day, monthName, year) {
-    selectedDate2 = dateStr;
-    renderCalendar2();
-    const panel = document.getElementById('add-listing-panel2');
-    panel.style.display = 'block';
-    document.getElementById('selected-date-label2').textContent = 'Add Listing — ' + monthName + ' ' + day + ', ' + year;
-    document.getElementById('new-mls2').focus();
-  }
-
-  function addListing2() {
-    const mls = document.getElementById('new-mls2').value.trim();
-    const street = document.getElementById('new-street2').value.trim();
-    const city = document.getElementById('new-city2').value.trim();
-    const statzip = document.getElementById('new-statzip2').value.trim();
-    if (!mls || !street || !city || !statzip) { alert('Please fill in all four fields.'); return; }
-    const slug = (street + ' ' + city + ' ' + statzip).toLowerCase().replace(/[^a-z0-9\s-]/g,'').trim().replace(/\s+/g,'-');
-    const url = 'https://www.callcarpenter.com/single-family/mra/' + mls + '/' + slug;
-    const displayAddress = street + ', ' + city + ', ' + statzip;
-    if (!tourListings[selectedDate2]) tourListings[selectedDate2] = [];
-    tourListings[selectedDate2].push({ mls, address: displayAddress, url, notes: '' });
-    document.getElementById('new-mls2').value = '';
-    document.getElementById('new-street2').value = '';
-    document.getElementById('new-city2').value = '';
-    document.getElementById('new-statzip2').value = '';
-    renderCalendar2();
-    renderToursList2();
-    // Also sync the dashboard calendar
-    renderCalendar();
-    renderToursList();
-  }
-
-  function renderToursList2() {
-    const container = document.getElementById('tours-list2');
-    if (!container) return;
-    const dates = Object.keys(tourListings).sort();
-    if (dates.length === 0) { container.innerHTML = '<p style="font-size:13px;color:var(--muted);padding:12px 0;">No tours scheduled yet. Click Schedule a Tour to get started.</p>'; return; }
-    const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-    const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-    container.innerHTML = dates.map(dateStr => {
-      const [y, m, d] = dateStr.split('-').map(Number);
-      const dateObj = new Date(y, m-1, d);
-      const label = days[dateObj.getDay()] + ', ' + months[m-1] + ' ' + d + ', ' + y;
-      return `<div class="tour-date-group">
-        <div class="tour-date-header">📅 ${label}</div>
-        ${tourListings[dateStr].map((l, i) => `
-          <div class="tour-listing-item" style="flex-direction:column;align-items:stretch;gap:10px;">
-            <div style="display:flex;align-items:center;gap:10px;">
-              <div style="flex:1;">
-                <a href="${l.url}" target="_blank">🏠 ${l.address}</a>
-                <div class="tour-listing-mls">MLS# ${l.mls}</div>
-              </div>
-              <button class="tour-remove" onclick="removeListing2('${dateStr}', ${i})">✕</button>
-            </div>
-            <div style="border-top:1px solid var(--border);padding-top:10px;">
-              <label style="font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px;">📝 Your Notes After the Tour</label>
-              <textarea placeholder="What did you love? Any concerns? Questions to follow up on..."
-                style="font-family:'DM Sans',sans-serif;font-size:13px;width:100%;border:1px solid var(--border);border-radius:6px;padding:8px 10px;background:var(--off-white);outline:none;resize:vertical;min-height:70px;color:var(--text);transition:border-color 0.15s;"
-                onfocus="this.style.borderColor='var(--red)'"
-                onblur="this.style.borderColor='var(--border)'"
-                oninput="saveTourNote('${dateStr}', ${i}, this.value)"
-              >${l.notes || ''}</textarea>
-            </div>
-          </div>`).join('')}
-      </div>`;
-    }).join('');
-  }
-
-  function removeListing2(dateStr, idx) {
-    tourListings[dateStr].splice(idx, 1);
-    if (tourListings[dateStr].length === 0) delete tourListings[dateStr];
-    renderCalendar2();
-    renderToursList2();
-    renderCalendar();
-    renderToursList();
-  }
-
-  // ——— HUB SYSTEM ———
-  const hubState = {};
-
-  function getTabByPage(pageId) {
-    return document.querySelector('[onclick*="showPage(\''+pageId+'\')"]') ||
-           document.querySelector('[onclick*='showPage(\\''+pageId+'\\'')]');
-  }
-
-  function initHub(hubId, prefilledLinks) {
-    hubState[hubId] = { links: [...prefilledLinks], docs: [], files: [] };
-    renderHub(hubId);
-  }
-
-  function renderHub(hubId) {
-    const container = document.getElementById('hub-' + hubId);
-    if (!container) return;
-    const state = hubState[hubId];
-
-    container.innerHTML = `
-      <!-- LINKS SECTION -->
-      <div class="hub-section">
-        <div class="hub-section-title">
-          <div class="hub-section-title-left">🔗 Links &amp; Resources</div>
-          <button class="hub-btn-sm hub-btn-outline" onclick="toggleHubPanel('${hubId}-link')">+ Add Link</button>
-        </div>
-        <div id="panel-${hubId}-link" class="hub-add-panel">
-          <input class="hub-input" id="link-label-${hubId}" placeholder="Link label (e.g. My Lender Portal)">
-          <input class="hub-input" id="link-url-${hubId}" placeholder="https://...">
-          <div style="display:flex;gap:8px;margin-top:4px;">
-            <button class="hub-btn-sm hub-btn-red" onclick="addHubLink('${hubId}')">Add</button>
-            <button class="hub-btn-sm hub-btn-outline" onclick="toggleHubPanel('${hubId}-link')">Cancel</button>
-          </div>
-        </div>
-        <div id="links-${hubId}">
-          ${state.links.map((l, i) => `
-            <div class="hub-link-item">
-              <span class="link-icon">🔗</span>
-              <a href="${l.url}" target="_blank">${l.label}</a>
-              <button class="tour-remove" onclick="removeHubLink('${hubId}', ${i})">✕</button>
-            </div>`).join('')}
-        </div>
-      </div>
-
-      <!-- DOCUMENTS SECTION -->
-      <div class="hub-section">
-        <div class="hub-section-title">
-          <div class="hub-section-title-left">📄 Documents</div>
-          <button class="hub-btn-sm hub-btn-outline" onclick="toggleHubPanel('${hubId}-doc')">+ Add Document</button>
-        </div>
-        <div id="panel-${hubId}-doc" class="hub-add-panel">
-          <input class="hub-input" id="doc-name-${hubId}" placeholder="Document name (e.g. Amendment #1, Earnest Money Receipt)">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
-            <select class="hub-input" id="doc-status-${hubId}" style="margin-bottom:0;">
-              <option value="status-pending">Pending</option>
-              <option value="status-signed">Signed</option>
-              <option value="status-required">Action Needed</option>
-              <option value="status-optional">Upcoming</option>
-            </select>
-            <input class="hub-input" id="doc-notes-${hubId}" placeholder="Notes (optional)" style="margin-bottom:0;">
-          </div>
-          <div style="display:flex;gap:8px;">
-            <button class="hub-btn-sm hub-btn-red" onclick="addHubDoc('${hubId}')">Add</button>
-            <button class="hub-btn-sm hub-btn-outline" onclick="toggleHubPanel('${hubId}-doc')">Cancel</button>
-          </div>
-        </div>
-        <div id="docs-${hubId}">
-          ${state.docs.length === 0 ? '<p style="font-size:13px;color:var(--muted);padding:8px 0;">No documents added yet.</p>' :
-            state.docs.map((d, i) => `
-              <div class="hub-doc-item">
-                <div class="doc-icon" style="width:32px;height:32px;font-size:15px;">📄</div>
-                <div class="doc-info"><h4>${d.name}</h4><p>${d.notes || ''}</p></div>
-                <span class="doc-status ${d.status}">${STATUS_LABELS[d.status]}</span>
-                <button class="tour-remove" onclick="removeHubDoc('${hubId}', ${i})">✕</button>
-              </div>`).join('')}
-        </div>
-      </div>
-
-      <!-- FILE UPLOAD SECTION -->
-      <div class="hub-section">
-        <div class="hub-section-title">
-          <div class="hub-section-title-left">📎 File Uploads</div>
-        </div>
-        <div class="hub-upload-area" onclick="document.getElementById('file-input-${hubId}').click()">
-          <div style="font-size:28px;">⬆️</div>
-          <p>Click to upload files — PDFs, images, or documents</p>
-          <p style="font-size:11px;margin-top:4px;">Files are stored in your browser session</p>
-        </div>
-        <input type="file" id="file-input-${hubId}" style="display:none;" multiple accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" onchange="handleHubUpload('${hubId}', this)">
-        <div class="hub-file-list" id="files-${hubId}">
-          ${state.files.map((f, i) => `
-            <div class="hub-file-item">
-              <span>📄</span>
-              <span>${f.name}</span>
-              <span style="color:var(--muted);font-size:11px;">${f.size}</span>
-              <button class="tour-remove" onclick="removeHubFile('${hubId}', ${i})">✕</button>
-            </div>`).join('')}
-        </div>
-      </div>`;
-  }
-
-  function toggleHubPanel(panelId) {
-    const p = document.getElementById('panel-' + panelId);
-    p.classList.toggle('open');
-  }
-
-  function addHubLink(hubId) {
-    const label = document.getElementById('link-label-' + hubId).value.trim();
-    const url = document.getElementById('link-url-' + hubId).value.trim();
-    if (!label || !url) return;
-    hubState[hubId].links.push({ label, url });
-    document.getElementById('link-label-' + hubId).value = '';
-    document.getElementById('link-url-' + hubId).value = '';
-    toggleHubPanel(hubId + '-link');
-    renderHub(hubId);
-  }
-
-  function removeHubLink(hubId, idx) {
-    hubState[hubId].links.splice(idx, 1);
-    renderHub(hubId);
-  }
-
-  function addHubDoc(hubId) {
-    const name = document.getElementById('doc-name-' + hubId).value.trim();
-    if (!name) return;
-    const status = document.getElementById('doc-status-' + hubId).value;
-    const notes = document.getElementById('doc-notes-' + hubId).value.trim();
-    hubState[hubId].docs.push({ name, status, notes });
-    document.getElementById('doc-name-' + hubId).value = '';
-    document.getElementById('doc-notes-' + hubId).value = '';
-    toggleHubPanel(hubId + '-doc');
-    renderHub(hubId);
-  }
-
-  function removeHubDoc(hubId, idx) {
-    hubState[hubId].docs.splice(idx, 1);
-    renderHub(hubId);
-  }
-
-  function handleHubUpload(hubId, input) {
-    const files = Array.from(input.files);
-    files.forEach(f => {
-      const size = f.size < 1024*1024 ? (f.size/1024).toFixed(1)+' KB' : (f.size/1024/1024).toFixed(1)+' MB';
-      hubState[hubId].files.push({ name: f.name, size });
-    });
-    renderHub(hubId);
-    input.value = '';
-  }
-
-  function removeHubFile(hubId, idx) {
-    hubState[hubId].files.splice(idx, 1);
-    renderHub(hubId);
-  }
-
-  // ——— TOUR CALENDAR ———
-  let calDate = new Date();
-  let selectedDate = null;
-  let tourListings = {}; // { 'YYYY-MM-DD': [{mls, address, url}] }
-
-  function toggleCalendar() {
-    const cal = document.getElementById('tour-calendar');
-    cal.style.display = cal.style.display === 'none' ? 'block' : 'none';
-    if (cal.style.display === 'block') renderCalendar();
-  }
-
-  function changeMonth(dir) {
-    calDate = new Date(calDate.getFullYear(), calDate.getMonth() + dir, 1);
-    renderCalendar();
-  }
-
-  function renderCalendar() {
-    const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-    const year = calDate.getFullYear();
-    const month = calDate.getMonth();
-    document.getElementById('cal-month-label').textContent = months[month] + ' ' + year;
-
-    const firstDay = new Date(year, month, 1).getDay();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const today = new Date();
-    const todayStr = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
-
-    const grid = document.getElementById('cal-grid');
-    grid.innerHTML = '';
-
-    for (let i = 0; i < firstDay; i++) {
-      const blank = document.createElement('div');
-      blank.className = 'cal-day empty';
-      grid.appendChild(blank);
-    }
-
-    for (let d = 1; d <= daysInMonth; d++) {
-      const dateStr = year + '-' + String(month+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
-      const div = document.createElement('div');
-      div.className = 'cal-day';
-      div.textContent = d;
-      if (dateStr === todayStr) div.classList.add('today');
-      if (dateStr === selectedDate) div.classList.add('selected');
-      if (tourListings[dateStr] && tourListings[dateStr].length > 0) {
-        div.classList.add('has-tours');
-        const dot = document.createElement('div');
-        dot.className = 'tour-dot';
-        div.appendChild(dot);
-      }
-      div.onclick = () => selectDate(dateStr, d, months[month], year);
-      grid.appendChild(div);
-    }
-  }
-
-  function selectDate(dateStr, day, monthName, year) {
-    selectedDate = dateStr;
-    renderCalendar();
-    const panel = document.getElementById('add-listing-panel');
-    panel.style.display = 'block';
-    document.getElementById('selected-date-label').textContent = 'Add Listing — ' + monthName + ' ' + day + ', ' + year;
-    document.getElementById('new-mls').focus();
-  }
-
-  function slugify(str) {
-    return str.toLowerCase()
-      .replace(/[^a-z0-9\s-]/g, '')
-      .trim()
-      .replace(/\s+/g, '-');
-  }
-
-  function addListing() {
-    const mls = document.getElementById('new-mls').value.trim();
-    const street = document.getElementById('new-street').value.trim();
-    const city = document.getElementById('new-city').value.trim();
-    const statzip = document.getElementById('new-statzip').value.trim();
-
-    if (!mls || !street || !city || !statzip) {
-      alert('Please fill in all four fields to generate the listing link.');
-      return;
-    }
-
-    // Build Carpenter URL: /single-family/mra/[MLS]/[street]-[city]-[state]-[zip]
-    const fullAddress = street + ' ' + city + ' ' + statzip;
-    const slug = slugify(fullAddress);
-    const url = 'https://www.callcarpenter.com/single-family/mra/' + mls + '/' + slug;
-    const displayAddress = street + ', ' + city + ', ' + statzip;
-
-    if (!tourListings[selectedDate]) tourListings[selectedDate] = [];
-    tourListings[selectedDate].push({ mls, address: displayAddress, url });
-
-    // Clear fields
-    document.getElementById('new-mls').value = '';
-    document.getElementById('new-street').value = '';
-    document.getElementById('new-city').value = '';
-    document.getElementById('new-statzip').value = '';
-
-    renderCalendar();
-    renderToursList();
-  }
-
-  function removeListing(dateStr, idx) {
-    tourListings[dateStr].splice(idx, 1);
-    if (tourListings[dateStr].length === 0) delete tourListings[dateStr];
-    renderCalendar();
-    renderToursList();
-  }
-
-  function renderToursList() {
-    const container = document.getElementById('tours-list');
-    const dates = Object.keys(tourListings).sort();
-    if (dates.length === 0) { container.innerHTML = ''; return; }
-
-    const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-    const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-
-    container.innerHTML = dates.map(dateStr => {
-      const [y, m, d] = dateStr.split('-').map(Number);
-      const dateObj = new Date(y, m-1, d);
-      const label = days[dateObj.getDay()] + ', ' + months[m-1] + ' ' + d + ', ' + y;
-      const listings = tourListings[dateStr];
-      return `<div class="tour-date-group">
-        <div class="tour-date-header">📅 ${label}</div>
-        ${listings.map((l, i) => `
-          <div class="tour-listing-item" style="flex-direction:column;align-items:stretch;gap:10px;">
-            <div style="display:flex;align-items:center;gap:10px;">
-              <div style="flex:1;">
-                <a href="${l.url}" target="_blank">🏠 ${l.address}</a>
-                <div class="tour-listing-mls">MLS# ${l.mls}</div>
-              </div>
-              <button class="tour-remove" onclick="removeListing('${dateStr}', ${i})" title="Remove">✕</button>
-            </div>
-            <div style="border-top:1px solid var(--border);padding-top:10px;">
-              <label style="font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px;">📝 Your Notes After the Tour</label>
-              <textarea
-                placeholder="What did you love? Any concerns? Questions to follow up on..."
-                style="font-family:'DM Sans',sans-serif;font-size:13px;width:100%;border:1px solid var(--border);border-radius:6px;padding:8px 10px;background:var(--off-white);outline:none;resize:vertical;min-height:70px;color:var(--text);transition:border-color 0.15s;"
-                onfocus="this.style.borderColor='var(--red)'"
-                onblur="this.style.borderColor='var(--border)'"
-                oninput="saveTourNote('${dateStr}', ${i}, this.value)"
-              >${l.notes || ''}</textarea>
-            </div>
-          </div>`).join('')}
-      </div>`;
-    }).join('');
-  }
-
-  function saveTourNote(dateStr, idx, value) {
-    if (tourListings[dateStr] && tourListings[dateStr][idx] !== undefined) {
-      tourListings[dateStr][idx].notes = value;
-    }
-  }
-
-
-  function syncInspectionDates(sourceInput, targetId) {
-    const target = document.getElementById(targetId);
-    if (target) target.value = sourceInput.value;
-    // Also sync the other direction
-    const mirror = document.getElementById(targetId === 'date-inspection' ? 'insp-date-inspection' : 'insp-date-response');
-    if (mirror && mirror !== sourceInput) mirror.value = sourceInput.value;
-  }
-
-
-
-  function syncAllDatesToInspection() {
-    const di = document.getElementById('date-inspection');
-    const dr = document.getElementById('date-response');
-    const ii = document.getElementById('insp-date-inspection');
-    const ir = document.getElementById('insp-date-response');
-    if (di && ii) ii.value = di.value;
-    if (dr && ir) ir.value = dr.value;
-  }
-
-  function syncHeaderFields() {
-    const name = document.getElementById('header-client-name').value.trim();
-    const addr = document.getElementById('header-address').value.trim();
-    document.title = name ? 'Jason Pearson – ' + name : 'Jason Pearson – Client Portal';
-  }
-
-  let settlementFiles = [];
-
-  function handleSettlementUpload(input) {
-    const files = Array.from(input.files);
-    files.forEach(f => {
-      const size = f.size < 1024*1024 ? (f.size/1024).toFixed(1)+' KB' : (f.size/1024/1024).toFixed(1)+' MB';
-      settlementFiles.push({ name: f.name, size, date: new Date().toLocaleDateString() });
-    });
-    renderSettlementFiles();
-    input.value = '';
-  }
-
-  function removeSettlementFile(idx) {
-    settlementFiles.splice(idx, 1);
-    renderSettlementFiles();
-  }
-
-  function renderSettlementFiles() {
-    const container = document.getElementById('settlement-file-list');
-    if (!container) return;
-    if (settlementFiles.length === 0) { container.innerHTML = ''; return; }
-    container.innerHTML = settlementFiles.map((f, i) => `
-      <div class="hub-file-item">
-        <span style="font-size:18px;">📋</span>
-        <span style="flex:1;font-weight:500;">${f.name}</span>
-        <span style="color:var(--muted);font-size:11px;">${f.size}</span>
-        <span style="color:var(--muted);font-size:11px;">${f.date}</span>
-        <button class="remove-btn" onclick="removeSettlementFile(${i})" style="font-size:15px;">✕</button>
-      </div>`).join('');
-  }
-
-  initHub2('closing', [
-    {label:'CFPB – What to Bring to Closing', url:'https://www.consumerfinance.gov/ask-cfpb/what-happens-at-a-closing-en-1917'},
-    {label:'Indiana Title Association', url:'https://www.intitle.org'},
-    {label:'USPS – Change of Address', url:'https://moversguide.usps.com'},
-    {label:'IRS – Homeowner Tax Deductions', url:'https://www.irs.gov/taxtopics/tc515'},
-    {label:'Indiana BMV – Update Your Address', url:'https://www.in.gov/bmv/license-plates-and-registration/address-change'}
-  ]);
-
-  function syncClosingDate(input) {
-    const dashboard = document.getElementById('date-closing');
-    if (dashboard) dashboard.value = input.value;
-    updateClosingCountdown(input.value);
-  }
-
-  function updateClosingCountdown(dateVal) {
-    const el = document.getElementById('closing-countdown');
-    if (!el || !dateVal) { if(el) el.textContent = '—'; return; }
-    const closing = new Date(dateVal + 'T00:00:00');
-    const today = new Date();
-    today.setHours(0,0,0,0);
-    const diff = Math.ceil((closing - today) / (1000 * 60 * 60 * 24));
-    if (diff > 0) el.textContent = diff;
-    else if (diff === 0) el.textContent = '🎉';
-    else el.textContent = '✓';
-  }
-
-  let personalVendors = [];
-
-  function addPersonalVendor() {
-    const category = document.getElementById('vendor-category').value;
-    const name = document.getElementById('vendor-name').value.trim();
-    const phone = document.getElementById('vendor-phone').value.trim();
-    const email = document.getElementById('vendor-email').value.trim();
-    const url = document.getElementById('vendor-url').value.trim();
-    const notes = document.getElementById('vendor-notes').value.trim();
-    if (!name) { document.getElementById('vendor-name').focus(); return; }
-    personalVendors.push({ category, name, phone, email, url, notes });
-    document.getElementById('vendor-category').value = '';
-    document.getElementById('vendor-name').value = '';
-    document.getElementById('vendor-phone').value = '';
-    document.getElementById('vendor-email').value = '';
-    document.getElementById('vendor-url').value = '';
-    document.getElementById('vendor-notes').value = '';
-    document.getElementById('add-vendor-panel').style.display = 'none';
-    renderPersonalVendors();
-  }
-
-  function removePersonalVendor(idx) {
-    personalVendors.splice(idx, 1);
-    renderPersonalVendors();
-  }
-
-  function renderPersonalVendors() {
-    const container = document.getElementById('personal-vendors-list');
-    if (personalVendors.length === 0) {
-      container.innerHTML = '<p style="font-size:13px;color:var(--muted);padding:4px 0;">No personal recommendations added yet.</p>';
-      return;
-    }
-    container.innerHTML = personalVendors.map((v, i) => `
-      <div style="background:var(--white);border:1px solid var(--border);border-radius:8px;padding:14px 18px;display:flex;align-items:flex-start;gap:14px;">
-        <div style="flex:1;">
-          ${v.category ? `<div style="font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--red);margin-bottom:4px;">${v.category}</div>` : ''}
-          <div style="font-size:14px;font-weight:600;margin-bottom:4px;">${v.name}</div>
-          <div style="display:flex;flex-wrap:wrap;gap:12px;">
-            ${v.phone ? `<a href="tel:${v.phone.replace(/\D/g,'')}" style="font-size:12px;color:var(--muted);text-decoration:none;">📞 ${v.phone}</a>` : ''}
-            ${v.email ? `<a href="mailto:${v.email}" style="font-size:12px;color:var(--muted);text-decoration:none;">✉️ ${v.email}</a>` : ''}
-            ${v.url ? `<a href="${v.url}" target="_blank" style="font-size:12px;color:var(--red);text-decoration:none;">🔗 Website</a>` : ''}
-          </div>
-          ${v.notes ? `<div style="font-size:12px;color:var(--muted);margin-top:6px;font-style:italic;">${v.notes}</div>` : ''}
-        </div>
-        <button class="remove-btn" onclick="removePersonalVendor(${i})" style="font-size:15px;">✕</button>
-      </div>`).join('');
-  }
-
-  renderPersonalVendors();
-
-  // Initialize all hub2 sections after DOM is ready
-  document.addEventListener('DOMContentLoaded', function() {
-    initHub2('agency', [
-      {label:'Indiana Buyer Agency Agreement (IAR Forms)', url:'https://www.inrealtors.com/forms'},
-      {label:'Carpenter Realtors Agent Directory', url:'https://www.callcarpenter.com/agents'},
-      {label:'What is a Buyer Agency Agreement?', url:'https://www.nar.realtor/buyers'}
-    ]);
-    initHub2('tours', [
-      {label:'Search Listings – Carpenter Realtors', url:'https://www.callcarpenter.com/search'},
-      {label:'Indiana MLS / BLC Search', url:'https://www.indyrealtors.com'},
-      {label:'Google Maps – Plan Your Route', url:'https://maps.google.com'}
-    ]);
-    initHub2('offer', [
-      {label:'Wire Fraud Warning – FBI', url:'https://www.fbi.gov/scams-and-safety/common-scams-and-crimes/real-estate-wire-fraud'},
-      {label:'Home Experts of Indiana', url:'https://homeexpertsofindiana.com/'},
-      {label:'AllCheck Inspections', url:'https://allcheck.biz/'},
-      {label:'IAR Forms Library', url:'https://www.inrealtors.com/forms'},
-      {label:'CFPB – Understanding Closing Costs', url:'https://www.consumerfinance.gov/ask-cfpb/what-are-closing-costs-en-1845'}
-    ]);
-    initHub2('inspection', [
-      {label:'ASHI – Find a Home Inspector', url:'https://www.homeinspector.org/find-inspector'},
-      {label:'Indiana State Dept. of Health – Radon Info', url:'https://www.in.gov/health/radon'},
-      {label:'HUD – Understanding Your Appraisal', url:'https://www.hud.gov/topics/buying_a_home'},
-      {label:'Home Experts of Indiana', url:'https://homeexpertsofindiana.com/'},
-      {label:'AllCheck Inspections', url:'https://allcheck.biz/'}
-    ]);
-    initHub2('utilities', [
-      {label:'USPS – Change of Address', url:'https://moversguide.usps.com'},
-      {label:'Indiana BMV – Update Your Address', url:'https://www.in.gov/bmv/license-plates-and-registration/address-change'}
-    ]);
-    initHub2('vendors', []);
-    initHub2('closing', [
-      {label:'CFPB – What to Bring to Closing', url:'https://www.consumerfinance.gov/ask-cfpb/what-happens-at-a-closing-en-1917'},
-      {label:'Indiana Title Association', url:'https://www.intitle.org'},
-      {label:'USPS – Change of Address', url:'https://moversguide.usps.com'},
-      {label:'IRS – Homeowner Tax Deductions', url:'https://www.irs.gov/taxtopics/tc515'},
-      {label:'Indiana BMV – Update Your Address', url:'https://www.in.gov/bmv/license-plates-and-registration/address-change'}
-    ]);
-    initHub2('search', [
-      {label:'Search Listings – Carpenter Realtors', url:'https://www.callcarpenter.com/search'},
-      {label:'Indiana MLS / BLC Search', url:'https://www.indyrealtors.com'},
-      {label:'School District Ratings – GreatSchools', url:'https://www.greatschools.org'},
-      {label:'Neighborhood Info – Niche.com', url:'https://www.niche.com/places-to-live/search/best-places-to-live/s/indiana'},
-      {label:'Cost of Living Calculator', url:'https://www.nerdwallet.com/cost-of-living-calculator'}
-    ]);
-    renderPersonalVendors();
-    renderDocs();
-  });
-</script>
 </body>
 </html>
